@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -87,57 +87,68 @@ export default function ProjectsScreen() {
   );
 
   const renderEmpty = () => (
-    <View className="flex-1 items-center justify-center px-6">
-      <View className="w-20 h-20 rounded-full bg-surface items-center justify-center mb-4">
+    <View className="items-center justify-center py-20 px-6">
+      <View className="w-20 h-20 bg-surface rounded-full items-center justify-center mb-4">
         <IconSymbol name="house.fill" size={40} color={colors.muted} />
       </View>
-      <Text className="text-2xl font-bold text-foreground mb-2 text-center">
-        No Projects Yet
-      </Text>
+      <Text className="text-2xl font-bold text-foreground mb-2">No Projects Yet</Text>
       <Text className="text-base text-muted text-center mb-6">
         Connect your first Supabase project to start monitoring
       </Text>
       <TouchableOpacity
-        onPress={handleAddProject}
-        className="bg-primary px-6 py-3 rounded-full"
+        onPress={() => router.push('/add-project')}
+        className="bg-primary px-6 py-3 rounded-full mb-4"
         activeOpacity={0.8}
       >
         <Text className="text-white font-semibold">Connect Project</Text>
       </TouchableOpacity>
+      <View className="flex-row items-center gap-4">
+        <TouchableOpacity
+          onPress={() => router.push('/security-info')}
+          activeOpacity={0.7}
+        >
+          <Text className="text-sm text-muted">🔒 Security Info</Text>
+        </TouchableOpacity>
+        <Text className="text-muted">•</Text>
+        <TouchableOpacity
+          onPress={() => Linking.openURL('https://github.com/jordienr/supa-mobile')}
+          activeOpacity={0.7}
+        >
+          <Text className="text-sm text-muted">💻 Open Source</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
   return (
-    <ScreenContainer>
-      <View className="flex-1">
-        <View className="px-6 pt-4 pb-3 flex-row items-center justify-between">
-          <Text className="text-3xl font-bold text-foreground">Projects</Text>
-          {projects.length > 0 && (
-            <TouchableOpacity
-              onPress={handleAddProject}
-              className="w-10 h-10 rounded-full bg-primary items-center justify-center"
-              activeOpacity={0.8}
-            >
-              <Text className="text-white text-2xl font-light">+</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <FlatList
-          data={projects}
-          renderItem={renderProject}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{
-            paddingHorizontal: 24,
-            paddingBottom: 24,
-            flexGrow: 1,
-          }}
-          ListEmptyComponent={renderEmpty}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-          }
-        />
+    <ScreenContainer className="flex-1">
+      <View className="px-6 pt-4 pb-3 flex-row items-center justify-between">
+        <Text className="text-3xl font-bold text-foreground">Projects</Text>
+        {projects.length > 0 && (
+          <TouchableOpacity
+            onPress={handleAddProject}
+            className="w-10 h-10 rounded-full bg-primary items-center justify-center"
+            activeOpacity={0.8}
+          >
+            <Text className="text-white text-2xl font-light">+</Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      <FlatList
+        data={projects}
+        renderItem={renderProject}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{
+          paddingHorizontal: 24,
+          paddingBottom: 24,
+          flexGrow: 1,
+        }}
+        ListEmptyComponent={renderEmpty}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+      />
     </ScreenContainer>
   );
 }

@@ -28,3 +28,11 @@
 - [x] Integrate Metrics API for resource usage (Prometheus format)
 - [x] Fetch real API request statistics from Management API
 - [x] Update UI to display actual data instead of mock data
+
+## Security Enhancements
+
+- [x] Upgrade from AsyncStorage to Expo SecureStore for encrypted key storage
+- [x] Update UI to clearly communicate security model
+- [x] Add transparency messaging about read-only operations
+- [x] Add open source notice in app
+- [x] Create dedicated security info screen

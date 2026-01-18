@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Link } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
 import { useColors } from '@/hooks/use-colors';
 import { ProjectStorage, validateSupabaseCredentials, type SupabaseProject } from '@/lib/supabase';
@@ -152,9 +152,23 @@ export default function AddProjectScreen() {
           </View>
 
           <View className="bg-surface rounded-xl p-4 mb-6 border border-border">
-            <Text className="text-sm text-muted leading-relaxed">
-              ⚠️ <Text className="font-medium">Security Note:</Text> Your service role key has full admin access. It will be stored securely on your device and never shared.
+            <Text className="text-sm font-semibold text-foreground mb-2">🔒 Security & Privacy</Text>
+            <Text className="text-sm text-muted leading-relaxed mb-3">
+              Your service role key is stored in <Text className="font-medium">encrypted device storage</Text> using Expo SecureStore. It never leaves your device and is never transmitted to any third-party servers.
             </Text>
+            <Text className="text-sm text-muted leading-relaxed mb-3">
+              ✓ <Text className="font-medium">Read-only operations:</Text> This app only performs SELECT queries on your database. No data is modified, created, or deleted.
+            </Text>
+            <Text className="text-sm text-muted leading-relaxed mb-2">
+              ✓ <Text className="font-medium">Open source:</Text> All code is publicly available on GitHub for transparency. You can verify that your keys are handled securely.
+            </Text>
+            <Link href="/security-info" asChild>
+              <TouchableOpacity activeOpacity={0.7}>
+                <Text className="text-sm font-medium text-primary">
+                  Learn more about security →
+                </Text>
+              </TouchableOpacity>
+            </Link>
           </View>
 
           <View className="gap-3">

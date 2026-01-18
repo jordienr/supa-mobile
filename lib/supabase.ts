@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface SupabaseProject {
@@ -55,6 +56,54 @@ const PROJECTS_KEY = '@supa_mobile:projects';
 const NOTIFICATION_RULES_KEY = '@supa_mobile:notification_rules';
 
 /**
+ * Secure storage wrapper that uses Expo SecureStore for sensitive data
+ * and AsyncStorage for non-sensitive data
+ */
+const SecureStorage = {
+  /**
+   * Store sensitive data (API keys, tokens) in encrypted storage
+   */
+  async setSecure(key: string, value: string): Promise<void> {
+    await SecureStore.setItemAsync(key, value);
+  },
+
+  /**
+   * Retrieve sensitive data from encrypted storage
+   */
+  async getSecure(key: string): Promise<string | null> {
+    return await SecureStore.getItemAsync(key);
+  },
+
+  /**
+   * Delete sensitive data from encrypted storage
+   */
+  async deleteSecure(key: string): Promise<void> {
+    await SecureStore.deleteItemAsync(key);
+  },
+
+  /**
+   * Store non-sensitive data in regular storage
+   */
+  async set(key: string, value: string): Promise<void> {
+    await AsyncStorage.setItem(key, value);
+  },
+
+  /**
+   * Retrieve non-sensitive data from regular storage
+   */
+  async get(key: string): Promise<string | null> {
+    return await AsyncStorage.getItem(key);
+  },
+
+  /**
+   * Delete non-sensitive data from regular storage
+   */
+  async delete(key: string): Promise<void> {
+    await AsyncStorage.removeItem(key);
+  },
+};
+
+/**
  * Create a Supabase client instance for a specific project
  */
 export function createSupabaseClient(url: string, serviceRoleKey: string): SupabaseClient {
@@ -103,12 +152,30 @@ export async function validateSupabaseCredentials(
 
 /**
  * Storage helpers for projects
+ * Stores project metadata in AsyncStorage and sensitive keys in SecureStore
  */
 export const ProjectStorage = {
   async getAll(): Promise<SupabaseProject[]> {
     try {
-      const json = await AsyncStorage.getItem(PROJECTS_KEY);
-      return json ? JSON.parse(json) : [];
+      const json = await SecureStorage.get(PROJECTS_KEY);
+      if (!json) return [];
+
+      const projects: SupabaseProject[] = JSON.parse(json);
+      
+      // Retrieve encrypted keys for each project
+      for (const project of projects) {
+        const serviceRoleKey = await SecureStorage.getSecure(`${PROJECTS_KEY}:${project.id}:serviceRoleKey`);
+        const personalAccessToken = await SecureStorage.getSecure(`${PROJECTS_KEY}:${project.id}:pat`);
+        
+        if (serviceRoleKey) {
+          project.serviceRoleKey = serviceRoleKey;
+        }
+        if (personalAccessToken) {
+          project.personalAccessToken = personalAccessToken;
+        }
+      }
+      
+      return projects;
     } catch {
       return [];
     }
@@ -118,19 +185,37 @@ export const ProjectStorage = {
     const projects = await this.getAll();
     const index = projects.findIndex((p) => p.id === project.id);
     
-    if (index >= 0) {
-      projects[index] = project;
-    } else {
-      projects.push(project);
+    // Store sensitive keys in SecureStore
+    await SecureStorage.setSecure(`${PROJECTS_KEY}:${project.id}:serviceRoleKey`, project.serviceRoleKey);
+    if (project.personalAccessToken) {
+      await SecureStorage.setSecure(`${PROJECTS_KEY}:${project.id}:pat`, project.personalAccessToken);
     }
     
-    await AsyncStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+    // Create a copy without sensitive data for regular storage
+    const projectMetadata = {
+      ...project,
+      serviceRoleKey: '', // Don't store in plain storage
+      personalAccessToken: undefined,
+    };
+    
+    if (index >= 0) {
+      projects[index] = projectMetadata;
+    } else {
+      projects.push(projectMetadata);
+    }
+    
+    await SecureStorage.set(PROJECTS_KEY, JSON.stringify(projects));
   },
 
   async remove(projectId: string): Promise<void> {
+    // Remove encrypted keys
+    await SecureStorage.deleteSecure(`${PROJECTS_KEY}:${projectId}:serviceRoleKey`);
+    await SecureStorage.deleteSecure(`${PROJECTS_KEY}:${projectId}:pat`);
+    
+    // Remove project metadata
     const projects = await this.getAll();
     const filtered = projects.filter((p) => p.id !== projectId);
-    await AsyncStorage.setItem(PROJECTS_KEY, JSON.stringify(filtered));
+    await SecureStorage.set(PROJECTS_KEY, JSON.stringify(filtered));
   },
 
   async get(projectId: string): Promise<SupabaseProject | null> {
@@ -145,7 +230,7 @@ export const ProjectStorage = {
 export const NotificationRuleStorage = {
   async getAll(projectId?: string): Promise<NotificationRule[]> {
     try {
-      const json = await AsyncStorage.getItem(NOTIFICATION_RULES_KEY);
+      const json = await SecureStorage.get(NOTIFICATION_RULES_KEY);
       const rules: NotificationRule[] = json ? JSON.parse(json) : [];
       return projectId ? rules.filter((r) => r.projectId === projectId) : rules;
     } catch {
@@ -163,13 +248,13 @@ export const NotificationRuleStorage = {
       rules.push(rule);
     }
     
-    await AsyncStorage.setItem(NOTIFICATION_RULES_KEY, JSON.stringify(rules));
+    await SecureStorage.set(NOTIFICATION_RULES_KEY, JSON.stringify(rules));
   },
 
   async remove(ruleId: string): Promise<void> {
     const rules = await this.getAll();
     const filtered = rules.filter((r) => r.id !== ruleId);
-    await AsyncStorage.setItem(NOTIFICATION_RULES_KEY, JSON.stringify(filtered));
+    await SecureStorage.set(NOTIFICATION_RULES_KEY, JSON.stringify(filtered));
   },
 
   async toggle(ruleId: string, enabled: boolean): Promise<void> {
@@ -178,13 +263,14 @@ export const NotificationRuleStorage = {
     
     if (rule) {
       rule.enabled = enabled;
-      await AsyncStorage.setItem(NOTIFICATION_RULES_KEY, JSON.stringify(rules));
+      await SecureStorage.set(NOTIFICATION_RULES_KEY, JSON.stringify(rules));
     }
   },
 };
 
 /**
  * Fetch project statistics from Supabase
+ * NOTE: This function only performs READ operations on the database
  */
 export async function fetchProjectStats(
   client: SupabaseClient,
@@ -192,7 +278,7 @@ export async function fetchProjectStats(
   projectRef?: string
 ): Promise<ProjectStats> {
   try {
-    // Fetch total user count from auth.users
+    // Fetch total user count from auth.users (READ ONLY)
     const { count: totalUsers, error: userError } = await client
       .from('auth.users')
       .select('*', { count: 'exact', head: true });
@@ -201,7 +287,7 @@ export async function fetchProjectStats(
       console.error('Error fetching total users:', userError);
     }
 
-    // Fetch active users (signed in within last 24 hours)
+    // Fetch active users (signed in within last 24 hours) (READ ONLY)
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { count: activeUsers, error: activeError } = await client
       .from('auth.users')
@@ -212,7 +298,7 @@ export async function fetchProjectStats(
       console.error('Error fetching active users:', activeError);
     }
 
-    // Fetch API request count from Management API if PAT is available
+    // Fetch API request count from Management API if PAT is available (READ ONLY)
     let apiRequests = 0;
     if (personalAccessToken && projectRef) {
       try {
@@ -235,7 +321,7 @@ export async function fetchProjectStats(
       }
     }
 
-    // Calculate database size (this is an approximation)
+    // Calculate database size (READ ONLY)
     const { data: sizeData, error: sizeError } = await client.rpc('pg_database_size', {
       name: 'postgres',
     });
@@ -271,13 +357,14 @@ export async function fetchProjectStats(
 
 /**
  * Fetch resource usage metrics from Metrics API
+ * NOTE: This function only performs READ operations
  */
 export async function fetchResourceUsage(
   projectRef: string,
   serviceRoleKey: string
 ): Promise<ResourceUsage> {
   try {
-    // Fetch from Prometheus-compatible Metrics API
+    // Fetch from Prometheus-compatible Metrics API (READ ONLY)
     const response = await fetch(
       `https://${projectRef}.supabase.co/customer/v1/privileged/metrics`,
       {
@@ -318,12 +405,13 @@ export async function fetchResourceUsage(
 
 /**
  * Fetch recent activity from auth logs
+ * NOTE: This function only performs READ operations
  */
 export async function fetchRecentActivity(
   client: SupabaseClient
 ): Promise<ActivityItem[]> {
   try {
-    // Query recent user signups
+    // Query recent user signups (READ ONLY)
     const { data: recentUsers, error } = await client
       .from('auth.users')
       .select('id, email, created_at')
