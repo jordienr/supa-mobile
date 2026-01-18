@@ -1,48 +1,143 @@
-import { ScrollView, Text, View, TouchableOpacity } from "react-native";
+import { useState, useCallback } from 'react';
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
+import { ScreenContainer } from '@/components/screen-container';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useColors } from '@/hooks/use-colors';
+import { ProjectStorage, type SupabaseProject } from '@/lib/supabase';
+import { useFocusEffect } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 
-import { ScreenContainer } from "@/components/screen-container";
+export default function ProjectsScreen() {
+  const colors = useColors();
+  const router = useRouter();
+  const [projects, setProjects] = useState<SupabaseProject[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
-/**
- * Home Screen - NativeWind Example
- *
- * This template uses NativeWind (Tailwind CSS for React Native).
- * You can use familiar Tailwind classes directly in className props.
- *
- * Key patterns:
- * - Use `className` instead of `style` for most styling
- * - Theme colors: use tokens directly (bg-background, text-foreground, bg-primary, etc.); no dark: prefix needed
- * - Responsive: standard Tailwind breakpoints work on web
- * - Custom colors defined in tailwind.config.js
- */
-export default function HomeScreen() {
-  return (
-    <ScreenContainer className="p-6">
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <View className="flex-1 gap-8">
-          {/* Hero Section */}
-          <View className="items-center gap-2">
-            <Text className="text-4xl font-bold text-foreground">Welcome</Text>
-            <Text className="text-base text-muted text-center">
-              Edit app/(tabs)/index.tsx to get started
-            </Text>
-          </View>
+  const loadProjects = async () => {
+    const allProjects = await ProjectStorage.getAll();
+    setProjects(allProjects);
+  };
 
-          {/* Example Card */}
-          <View className="w-full max-w-sm self-center bg-surface rounded-2xl p-6 shadow-sm border border-border">
-            <Text className="text-lg font-semibold text-foreground mb-2">NativeWind Ready</Text>
-            <Text className="text-sm text-muted leading-relaxed">
-              Use Tailwind CSS classes directly in your React Native components.
-            </Text>
-          </View>
+  useFocusEffect(
+    useCallback(() => {
+      loadProjects();
+    }, [])
+  );
 
-          {/* Example Button */}
-          <View className="items-center">
-            <TouchableOpacity className="bg-primary px-6 py-3 rounded-full active:opacity-80">
-              <Text className="text-background font-semibold">Get Started</Text>
-            </TouchableOpacity>
-          </View>
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadProjects();
+    setRefreshing(false);
+  };
+
+  const handleAddProject = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/add-project');
+  };
+
+  const handleProjectPress = (project: SupabaseProject) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push({
+      pathname: '/dashboard',
+      params: { projectId: project.id },
+    });
+  };
+
+  const getStatusColor = (status: SupabaseProject['status']) => {
+    switch (status) {
+      case 'healthy':
+        return colors.success;
+      case 'warning':
+        return colors.warning;
+      case 'error':
+        return colors.error;
+      default:
+        return colors.muted;
+    }
+  };
+
+  const renderProject = ({ item }: { item: SupabaseProject }) => (
+    <TouchableOpacity
+      onPress={() => handleProjectPress(item)}
+      className="bg-surface rounded-2xl p-4 mb-3 border border-border"
+      activeOpacity={0.7}
+    >
+      <View className="flex-row items-center justify-between mb-2">
+        <Text className="text-lg font-semibold text-foreground flex-1">{item.name}</Text>
+        <View
+          className="w-3 h-3 rounded-full"
+          style={{ backgroundColor: getStatusColor(item.status) }}
+        />
+      </View>
+      <Text className="text-sm text-muted mb-3" numberOfLines={1}>
+        {item.url}
+      </Text>
+      <View className="flex-row gap-4">
+        <View className="flex-1">
+          <Text className="text-xs text-muted mb-1">Users</Text>
+          <Text className="text-base font-medium text-foreground">-</Text>
         </View>
-      </ScrollView>
+        <View className="flex-1">
+          <Text className="text-xs text-muted mb-1">Requests Today</Text>
+          <Text className="text-base font-medium text-foreground">-</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderEmpty = () => (
+    <View className="flex-1 items-center justify-center px-6">
+      <View className="w-20 h-20 rounded-full bg-surface items-center justify-center mb-4">
+        <IconSymbol name="house.fill" size={40} color={colors.muted} />
+      </View>
+      <Text className="text-2xl font-bold text-foreground mb-2 text-center">
+        No Projects Yet
+      </Text>
+      <Text className="text-base text-muted text-center mb-6">
+        Connect your first Supabase project to start monitoring
+      </Text>
+      <TouchableOpacity
+        onPress={handleAddProject}
+        className="bg-primary px-6 py-3 rounded-full"
+        activeOpacity={0.8}
+      >
+        <Text className="text-white font-semibold">Connect Project</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <ScreenContainer>
+      <View className="flex-1">
+        <View className="px-6 pt-4 pb-3 flex-row items-center justify-between">
+          <Text className="text-3xl font-bold text-foreground">Projects</Text>
+          {projects.length > 0 && (
+            <TouchableOpacity
+              onPress={handleAddProject}
+              className="w-10 h-10 rounded-full bg-primary items-center justify-center"
+              activeOpacity={0.8}
+            >
+              <Text className="text-white text-2xl font-light">+</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <FlatList
+          data={projects}
+          renderItem={renderProject}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{
+            paddingHorizontal: 24,
+            paddingBottom: 24,
+            flexGrow: 1,
+          }}
+          ListEmptyComponent={renderEmpty}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          }
+        />
+      </View>
     </ScreenContainer>
   );
 }
