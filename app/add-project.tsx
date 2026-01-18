@@ -19,21 +19,22 @@ export default function AddProjectScreen() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
-  const [anonKey, setAnonKey] = useState('');
+  const [serviceRoleKey, setServiceRoleKey] = useState('');
+  const [personalAccessToken, setPersonalAccessToken] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleConnect = async () => {
-    if (!url.trim() || !anonKey.trim()) {
-      Alert.alert('Missing Information', 'Please provide both project URL and API key');
+    if (!url.trim() || !serviceRoleKey.trim()) {
+      Alert.alert('Missing Information', 'Please provide both project URL and service role key');
       return;
     }
 
     setLoading(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    const { valid, error } = await validateSupabaseCredentials(url.trim(), anonKey.trim());
+    const { valid, error, projectRef } = await validateSupabaseCredentials(url.trim(), serviceRoleKey.trim());
 
-    if (!valid) {
+    if (!valid || !projectRef) {
       setLoading(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Connection Failed', error || 'Could not connect to Supabase project');
@@ -43,8 +44,10 @@ export default function AddProjectScreen() {
     const project: SupabaseProject = {
       id: Date.now().toString(),
       name: name.trim() || 'My Project',
+      projectRef,
       url: url.trim(),
-      anonKey: anonKey.trim(),
+      serviceRoleKey: serviceRoleKey.trim(),
+      personalAccessToken: personalAccessToken.trim() || undefined,
       status: 'healthy',
       createdAt: new Date().toISOString(),
     };
@@ -108,12 +111,32 @@ export default function AddProjectScreen() {
 
             <View>
               <Text className="text-sm font-medium text-foreground mb-2">
-                Anon/Public API Key *
+                Service Role Key *
               </Text>
               <TextInput
-                value={anonKey}
-                onChangeText={setAnonKey}
+                value={serviceRoleKey}
+                onChangeText={setServiceRoleKey}
                 placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                placeholderTextColor={colors.muted}
+                className="bg-surface border border-border rounded-xl px-4 py-3 text-foreground"
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+                returnKeyType="next"
+              />
+              <Text className="text-xs text-muted mt-1">
+                Found in Settings → API → Project API keys (service_role key)
+              </Text>
+            </View>
+
+            <View>
+              <Text className="text-sm font-medium text-foreground mb-2">
+                Personal Access Token (Optional)
+              </Text>
+              <TextInput
+                value={personalAccessToken}
+                onChangeText={setPersonalAccessToken}
+                placeholder="sbp_..."
                 placeholderTextColor={colors.muted}
                 className="bg-surface border border-border rounded-xl px-4 py-3 text-foreground"
                 autoCapitalize="none"
@@ -123,15 +146,14 @@ export default function AddProjectScreen() {
                 onSubmitEditing={handleConnect}
               />
               <Text className="text-xs text-muted mt-1">
-                Found in Settings → API → Project API keys
+                Optional: For API usage statistics. Generate at supabase.com/dashboard/account/tokens
               </Text>
             </View>
           </View>
 
           <View className="bg-surface rounded-xl p-4 mb-6 border border-border">
             <Text className="text-sm text-muted leading-relaxed">
-              💡 <Text className="font-medium">Tip:</Text> You can find your project URL and API key in your Supabase
-              dashboard under Settings → API
+              ⚠️ <Text className="font-medium">Security Note:</Text> Your service role key has full admin access. It will be stored securely on your device and never shared.
             </Text>
           </View>
 

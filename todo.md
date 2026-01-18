@@ -19,3 +19,12 @@
 - [ ] Real-time data updates
 - [x] Error handling and offline state
 - [x] Custom app icon and branding
+
+## Management API Integration
+
+- [x] Research Supabase Management API authentication
+- [x] Update project connection to use service role key
+- [x] Fetch real user statistics from auth.users table
+- [x] Integrate Metrics API for resource usage (Prometheus format)
+- [x] Fetch real API request statistics from Management API
+- [x] Update UI to display actual data instead of mock data

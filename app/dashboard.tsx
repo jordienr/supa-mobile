@@ -47,10 +47,10 @@ export default function DashboardScreen() {
 
     setProject(proj);
 
-    const client = createSupabaseClient(proj.url, proj.anonKey);
+    const client = createSupabaseClient(proj.url, proj.serviceRoleKey);
     const [statsData, resourcesData, activitiesData] = await Promise.all([
-      fetchProjectStats(client),
-      fetchResourceUsage(),
+      fetchProjectStats(client, proj.personalAccessToken, proj.projectRef),
+      fetchResourceUsage(proj.projectRef, proj.serviceRoleKey),
       fetchRecentActivity(client),
     ]);
 
