@@ -1,0 +1,233 @@
+# Supa Mobile
+
+A React Native mobile app for monitoring your Supabase projects. Track user analytics, resource usage (CPU, memory, disk), and set up custom notification rules for important events.
+
+![App Icon](./assets/images/icon.png)
+
+## Features
+
+- 📊 **Project Dashboard** - View real-time stats including total users, active users, API requests, and database size
+- 📈 **Resource Monitoring** - Track CPU, memory, and disk usage with color-coded indicators
+- 🔔 **Custom Notifications** - Create rules for new user signups, table inserts, or resource thresholds
+- 🌓 **Dark Mode** - Automatic theme switching based on system preferences
+- 💾 **Local Storage** - All data stored locally using AsyncStorage (no cloud dependency)
+- 🎨 **Native iOS Feel** - Follows Apple Human Interface Guidelines
+
+## Tech Stack
+
+- **React Native 0.81** with Expo SDK 54
+- **Expo Router 6** for file-based navigation
+- **NativeWind 4** (Tailwind CSS for React Native)
+- **TypeScript 5.9**
+- **Supabase JavaScript Client** for API integration
+- **AsyncStorage** for local data persistence
+
+## Prerequisites
+
+- Node.js 18+ and pnpm
+- [Expo Go](https://expo.dev/client) app on your iOS or Android device
+- A Supabase project (get one free at [supabase.com](https://supabase.com))
+
+## Getting Started
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/jordienr/supa-mobile.git
+cd supa-mobile
+```
+
+### 2. Install Dependencies
+
+```bash
+pnpm install
+```
+
+### 3. Start the Development Server
+
+```bash
+pnpm dev
+```
+
+This will start both the Metro bundler and the backend server.
+
+### 4. Open the App
+
+**On Mobile Device:**
+1. Install [Expo Go](https://expo.dev/client) from the App Store or Google Play
+2. Scan the QR code displayed in your terminal with:
+   - **iOS**: Camera app
+   - **Android**: Expo Go app
+
+**On Web:**
+- The app will automatically open in your browser at `http://localhost:8081`
+
+## Using the App
+
+### Connect Your First Project
+
+1. Open the app and tap **"Connect Project"**
+2. Enter your Supabase project details:
+   - **Project URL**: Found in your Supabase dashboard (e.g., `https://xxxxx.supabase.co`)
+   - **Anon/Public API Key**: Found in Settings → API → Project API keys
+   - **Project Name** (optional): A friendly name for your project
+
+3. Tap **"Connect Project"** to validate and save
+
+### View Project Stats
+
+- Tap on a project card to view the dashboard
+- Pull down to refresh data
+- View stats for users, API requests, and database size
+- Monitor resource usage with color-coded progress bars
+
+### Create Notification Rules
+
+1. From the dashboard, tap the bell icon (top-right)
+2. Tap the **+** button to create a new rule
+3. Choose a trigger type:
+   - **New User**: Alert on user signups
+   - **New Row**: Alert when a row is inserted into a specific table
+   - **Threshold**: Alert when CPU, memory, or disk exceeds a percentage
+4. Configure the rule and save
+
+## Project Structure
+
+```
+supa-mobile/
+├── app/                      # Expo Router screens
+│   ├── (tabs)/              # Tab navigation
+│   │   └── index.tsx        # Projects list (home)
+│   ├── add-project.tsx      # Add new project form
+│   ├── dashboard.tsx        # Project dashboard
+│   ├── notifications.tsx    # Notification rules list
+│   └── create-rule.tsx      # Create/edit notification rule
+├── components/              # Reusable components
+│   ├── screen-container.tsx # SafeArea wrapper
+│   └── ui/                  # UI components
+├── lib/                     # Core utilities
+│   ├── supabase.ts         # Supabase client & storage
+│   └── utils.ts            # Helper functions
+├── hooks/                   # Custom React hooks
+├── assets/                  # Images and icons
+├── theme.config.js         # Color palette configuration
+└── app.config.ts           # Expo configuration
+```
+
+## Available Scripts
+
+```bash
+# Start development server (Metro + backend)
+pnpm dev
+
+# Start Metro bundler only
+pnpm dev:metro
+
+# Start backend server only
+pnpm dev:server
+
+# Type checking
+pnpm check
+
+# Linting
+pnpm lint
+
+# Format code
+pnpm format
+
+# Run tests
+pnpm test
+
+# Build for production
+pnpm build
+
+# Start production server
+pnpm start
+```
+
+## Customization
+
+### Update App Name and Icon
+
+Edit `app.config.ts`:
+
+```typescript
+const env = {
+  appName: "Your App Name",
+  appSlug: "your-app-slug",
+  logoUrl: "https://your-logo-url.png",
+  // ...
+};
+```
+
+Replace icons in `assets/images/`:
+- `icon.png` - App icon (1024x1024)
+- `splash-icon.png` - Splash screen icon
+- `favicon.png` - Web favicon
+
+### Update Theme Colors
+
+Edit `theme.config.js`:
+
+```javascript
+const themeColors = {
+  primary: { light: '#10b981', dark: '#10b981' },
+  background: { light: '#ffffff', dark: '#0a0a0a' },
+  // ...
+};
+```
+
+## Building for Production
+
+### iOS (requires macOS)
+
+```bash
+pnpm ios
+```
+
+### Android
+
+```bash
+pnpm android
+```
+
+### Web
+
+```bash
+pnpm build
+pnpm start
+```
+
+## Limitations & Future Enhancements
+
+**Current Limitations:**
+- Stats are partially mocked (Supabase doesn't expose all metrics via public API)
+- Push notifications require additional setup with Expo's notification service
+- Real-time updates require manual refresh (pull-to-refresh)
+
+**Planned Features:**
+- [ ] Real-time data updates using Supabase Realtime
+- [ ] Push notification integration
+- [ ] Settings screen for theme and project management
+- [ ] Export reports (PDF/CSV)
+- [ ] Multi-project comparison view
+- [ ] Query performance insights
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+MIT License - feel free to use this project for personal or commercial purposes.
+
+## Support
+
+For issues or questions:
+- Open an issue on [GitHub](https://github.com/jordienr/supa-mobile/issues)
+- Check the [Expo documentation](https://docs.expo.dev/)
+- Visit [Supabase documentation](https://supabase.com/docs)
+
+---
+
+Built with ❤️ using React Native and Supabase
